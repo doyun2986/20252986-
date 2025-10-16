@@ -89,7 +89,7 @@ void loop() {
     myservo.writeMicroseconds(_DUTY_MIN);
     digitalWrite(PIN_LED, HIGH);
   } else if ((distance > _DIST_MIN) && (distance < _DIST_MAX)){
-    myservo.writeMicroseconds(_DUTY_MIN+(((_DUTY_MAX - _DUTY_MIN)/(_DIST_MAX - _DIST_MIN))*(distance -_DIST_MIN-3)));
+    myservo.writeMicroseconds(_DUTY_MIN+(((_DUTY_MAX - _DUTY_MIN)/(_DIST_MAX - _DIST_MIN))*(distance -_DIST_MIN)));
     digitalWrite(PIN_LED, LOW);
   } else if (distance>=_DIST_MAX){
     myservo.writeMicroseconds(_DUTY_MAX);
@@ -119,3 +119,4 @@ float USS_measure(int TRIG, int ECHO)
   
   return pulseIn(ECHO, HIGH, TIMEOUT) * SCALE; // unit: mm
 }
+
