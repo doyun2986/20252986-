@@ -1,0 +1,139 @@
+def get_matrix():
+    n = int(input("정방행렬의 크기 n을 입력하세요: "))
+    matrix = []
+    print(f"{n}x{n} 행렬의 각 행을 공백으로 구분하여 입력하세요:")
+    for i in range(n):
+        row = list(map(float, input(f"{i+1}행: ").split()))
+        matrix.append(row)
+    return matrix
+
+def determinant(matrix):
+    n = len(matrix)
+    if n == 1:
+        return matrix[0][0]
+    if n == 2:
+        return matrix[0][0] * matrix[1][1] - matrix[0][1] * matrix[1][0]
+    det = 0
+    for j in range(n):
+        sub_matrix = [row[:j] + row[j+1:] for row in matrix[1:]]
+        det += ((-1) ** j) * matrix[0][j] * determinant(sub_matrix)
+    return det
+
+def inverse_by_determinant(matrix):
+    det = determinant(matrix)
+    if abs(det) < 1e-9:
+        print("[오류] 행렬식이 0이므로 역행렬이 존재하지 않습니다. (행렬식 방식)")
+        return None
+    n = len(matrix)
+    if n == 1:
+        return [[1.0 / matrix[0][0]]]
+    adjugate = []
+    for i in range(n):
+        adj_row = []
+        for j in range(n):
+            sub_matrix = [row[:i] + row[i+1:] for row in (matrix[:j] + matrix[j+1:])]
+            cofactor = ((-1) ** (i + j)) * determinant(sub_matrix)
+            adj_row.append(cofactor)
+        adjugate.append(adj_row)
+    inverse = [[adjugate[i][j] / det for j in range(n)] for i in range(n)]
+    return inverse
+
+def inverse_by_gauss_jordan(matrix):
+    n = len(matrix)
+    aug = [row[:] + [1.0 if i == j else 0.0 for j in range(n)] for i, row in enumerate(matrix)]
+    for i in range(n):
+        max_row = i
+        for k in range(i + 1, n):
+            if abs(aug[k][i]) > abs(aug[max_row][i]):
+                max_row = k
+        aug[i], aug[max_row] = aug[max_row], aug[i]
+        pivot = aug[i][i]
+        if abs(pivot) < 1e-9:
+            print("[오류] 피벗이 0이므로 역행렬이 존재하지 않습니다. (가우스-조던 방식)")
+            return None
+        for j in range(2 * n):
+            aug[i][j] /= pivot
+        for k in range(n):
+            if k != i:
+                factor = aug[k][i]
+                for j in range(2 * n):
+                    aug[k][j] -= factor * aug[i][j]
+    inverse = [row[n:] for row in aug]
+    return inverse
+
+def multiply_matrices(mat1, mat2):
+    n = len(mat1)
+    result = [[0.0] * n for _ in range(n)]
+    for i in range(n):
+        for j in range(n):
+            for k in range(n):
+                result[i][j] += mat1[i][k] * mat2[k][j]
+    return result
+
+def verify_inverse(original, inverse, method_name):
+    if inverse is None:
+        return
+    n = len(original)
+    product = multiply_matrices(original, inverse)
+    print(f"\n[{method_name} 역행렬 검증: A * A^-1 계산 결과]")
+    print_matrix(product)
+    
+    is_identity = True
+    for i in range(n):
+        for j in range(n):
+            expected = 1.0 if i == j else 0.0
+            if abs(product[i][j] - expected) > 1e-6:
+                is_identity = False
+                break
+        if not is_identity:
+            break
+            
+    if is_identity:
+        print(f"검증 결과: {method_name}으로 구한 역행렬과의 곱이 단위행렬과 일치")
+    else:
+        print(f"검증 결과: {method_name}으로 구한 역행렬 검증 실패")
+
+def print_matrix(matrix):
+    if matrix is None:
+        return
+    for row in matrix:
+        print([round(val, 4) for val in row])
+
+def compare_matrices(mat1, mat2):
+    if mat1 is None or mat2 is None:
+        return False
+    n = len(mat1)
+    for i in range(n):
+        for j in range(n):
+            if abs(mat1[i][j] - mat2[i][j]) > 1e-6:
+                return False
+    return True
+
+def main():
+    matrix = get_matrix()
+    
+    print("1. 행렬식을 이용한 역행렬 ")
+    inv_det = inverse_by_determinant(matrix)
+    if inv_det is not None:
+        print_matrix(inv_det)
+        
+    print("2. 가우스-조던 소거법")
+    inv_gj = inverse_by_gauss_jordan(matrix)
+    if inv_gj is not None:
+        print_matrix(inv_gj)
+        
+    print("3. 결과 비교 ")
+    if inv_det is not None and inv_gj is not None:
+        if compare_matrices(inv_det, inv_gj):
+            print("비교 결과: 서로 역행렬이 동일")
+        else:
+            print("비교 결과: 서로 역행렬이 다름")
+    else:
+        print("역행렬이 존재하지 않음")
+        
+    print("4. 추가 기능: 역행렬 검증 ")
+    verify_inverse(matrix, inv_det, "행렬식 방식")
+    verify_inverse(matrix, inv_gj, "가우스-조던 방식")
+
+if __name__ == "__main__":
+    main()
