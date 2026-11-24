@@ -1,0 +1,231 @@
+import copy
+
+SET_A = [1, 2, 3, 4, 5]
+N = len(SET_A)
+
+
+def print_matrix(matrix, title="관계 행렬"):
+    print(f"\n[{title}]")
+    print("    " + " ".join(str(x) for x in SET_A))
+    print("  +" + "--" * N)
+    for idx, row in enumerate(matrix):
+        print(f"{SET_A[idx]} | " + " ".join(str(val) for val in row))
+
+
+def input_relation_matrix():
+    print(f"집합 A = {set(SET_A)}에 대한 {N}x{N} 관계 행렬을 행 단위로 입력하세요 (0 또는 1, 공백 구분).")
+    matrix = []
+    for i in range(N):
+        while True:
+            try:
+                row = list(map(int, input(f"{i + 1}행 입력 (예: 1 0 0 0 0): ").strip().split()))
+                if len(row) != N or any(v not in (0, 1) for v in row):
+                    print(f"  [오류] 0과 1로 이루어진 정확히 {N}개의 숫자를 입력해주세요.")
+                    continue
+                matrix.append(row)
+                break
+            except ValueError:
+                print("  [오류] 숫자만 입력해주세요.")
+    return matrix
+
+
+def is_reflexive(matrix):
+    for i in range(N):
+        if matrix[i][i] != 1:
+            return False
+    return True
+
+
+def is_symmetric(matrix):
+    for i in range(N):
+        for j in range(N):
+            if matrix[i][j] != matrix[j][i]:
+                return False
+    return True
+
+
+def is_transitive(matrix):
+    for i in range(N):
+        for j in range(N):
+            if matrix[i][j] == 1:
+                for k in range(N):
+                    if matrix[j][k] == 1 and matrix[i][k] != 1:
+                        return False
+    return True
+
+
+def check_equivalence(matrix):
+    r = is_reflexive(matrix)
+    s = is_symmetric(matrix)
+    t = is_transitive(matrix)
+    print("\n--- [동치 관계 성질 판별 결과] ---")
+    print(f"• 반사 관계 (Reflexive) : {'만족' if r else '불만족'}")
+    print(f"• 대칭 관계 (Symmetric) : {'만족' if s else '불만족'}")
+    print(f"• 추이 관계 (Transitive): {'만족' if t else '불만족'}")
+
+    is_eq = r and s and t
+    if is_eq:
+        print("=> 결론: 이 관계는 [동치 관계]입니다.")
+    else:
+        print("=> 결론: 이 관계는 [동치 관계가 아닙니다].")
+    return is_eq, r, s, t
+
+
+def get_equivalence_class(matrix, element):
+    idx = SET_A.index(element)
+    return [SET_A[j] for j in range(N) if matrix[idx][j] == 1]
+
+
+def print_all_equivalence_classes(matrix):
+    print("\n--- [각 원소에 대한 동치류 출력] ---")
+    for elem in SET_A:
+        eq_class = get_equivalence_class(matrix, elem)
+        print(f"• [{elem}] = {{{', '.join(map(str, eq_class))}}}")
+
+
+def reflexive_closure(matrix):
+    res = copy.deepcopy(matrix)
+    for i in range(N):
+        res[i][i] = 1
+    return res
+
+
+def symmetric_closure(matrix):
+    res = copy.deepcopy(matrix)
+    for i in range(N):
+        for j in range(N):
+            if res[i][j] == 1:
+                res[j][i] = 1
+    return res
+
+
+def transitive_closure(matrix):
+    res = copy.deepcopy(matrix)
+    for k in range(N):
+        for i in range(N):
+            for j in range(N):
+                if res[i][k] == 1 and res[k][j] == 1:
+                    res[i][j] = 1
+    return res
+
+
+def diagnose_counterexamples(matrix):
+    print("\n--- [추가기능 1: 성질 위배 반례 자동 진단] ---")
+    found_any = False
+
+    # 1) 반사 반례
+    r_errors = [f"({SET_A[i]}, {SET_A[i]}) ∉ R" for i in range(N) if matrix[i][i] != 1]
+    if r_errors:
+        found_any = True
+        print("• 반사 위배 반례:", ", ".join(r_errors))
+
+    # 2) 대칭 반례
+    s_errors = [
+        f"({SET_A[i]}, {SET_A[j]}) ∈ R 이지만 ({SET_A[j]}, {SET_A[i]}) ∉ R"
+        for i in range(N) for j in range(N)
+        if matrix[i][j] == 1 and matrix[j][i] == 0
+    ]
+    if s_errors:
+        found_any = True
+        print("• 대칭 위배 반례:")
+        for err in s_errors:
+            print(f"   - {err}")
+
+    # 3) 추이 반례
+    t_errors = []
+    for i in range(N):
+        for j in range(N):
+            if matrix[i][j] == 1:
+                for k in range(N):
+                    if matrix[j][k] == 1 and matrix[i][k] == 0:
+                        t_errors.append(
+                            f"({SET_A[i]}, {SET_A[j]}), ({SET_A[j]}, {SET_A[k]}) ∈ R 이지만 ({SET_A[i]}, {SET_A[k]}) ∉ R"
+                        )
+    if t_errors:
+        found_any = True
+        print("• 추이 위배 반례:")
+        for err in t_errors:
+            print(f"   - {err}")
+
+    if not found_any:
+        print("• 위배되는 반례가 없습니다. (모든 성질 만족)")
+
+
+def verify_partition(matrix):
+    print("\n--- [추가기능 2: 몫집합(분할, A/R) 도출 및 수학적 검증] ---")
+    unique_classes = []
+    for elem in SET_A:
+        cls = set(get_equivalence_class(matrix, elem))
+        if cls not in unique_classes:
+            unique_classes.append(cls)
+
+    partition_str = ", ".join("{" + ", ".join(map(str, sorted(c))) + "}" for c in unique_classes)
+    print(f"• 도출된 몫집합 A/R (분할): {{ {partition_str} }}")
+    print(f"• 분할 블록 개수: {len(unique_classes)}개")
+
+    # 분할 3대 조건 검증
+    cond1 = all(len(c) > 0 for c in unique_classes)
+    cond2 = all(
+        unique_classes[i].isdisjoint(unique_classes[j])
+        for i in range(len(unique_classes))
+        for j in range(i + 1, len(unique_classes))
+    )
+    union_all = set().union(*unique_classes) if unique_classes else set()
+    cond3 = (union_all == set(SET_A))
+
+    print(f"  [검증 1] 공집합인 블록이 없는가?          -> {'통과' if cond1 else '실패'}")
+    print(f"  [검증 2] 서로 다른 블록이 상호 배타적인가? -> {'통과' if cond2 else '실패'}")
+    print(f"  [검증 3] 모든 블록의 합집합이 A와 같은가?  -> {'통과' if cond3 else '실패'}")
+
+
+def main():
+    print("==================================================")
+    print("   집합 A = {1, 2, 3, 4, 5} 동치 관계 판별 프로그램")
+    print("==================================================")
+
+    # 1단계: 행렬 입력
+    matrix = input_relation_matrix()
+    print_matrix(matrix, "입력된 관계 행렬")
+    input("\n[Enter]를 누르면 2단계")
+
+    # 2단계: 동치 관계 판별 + 추가기능(반례 진단)
+    is_eq, r, s, t = check_equivalence(matrix)
+    if not is_eq:
+        diagnose_counterexamples(matrix)
+
+    # 3단계 또는 4단계 분기
+    if is_eq:
+        input("\n[Enter]를 누르면 3단계")
+        print_all_equivalence_classes(matrix)
+        verify_partition(matrix)
+    else:
+        input("\n[Enter]를 누르면 4단계")
+        current = copy.deepcopy(matrix)
+
+        if not r:
+            print("\n>>> [반사 폐포 변환 수행]")
+            print_matrix(current, "반사 폐포 변환 전")
+            current = reflexive_closure(current)
+            print_matrix(current, "반사 폐포 변환 후")
+
+        if not s:
+            print("\n>>> [대칭 폐포 변환 수행]")
+            print_matrix(current, "대칭 폐포 변환 전")
+            current = symmetric_closure(current)
+            print_matrix(current, "대칭 폐포 변환 후")
+
+        if not t:
+            print("\n>>> [추이 폐포 변환 수행]")
+            print_matrix(current, "추이 폐포 변환 전")
+            current = transitive_closure(current)
+            print_matrix(current, "추이 폐포 변환 후")
+
+        input("\n[Enter]를 누르면 폐포 변환 후 동치 관계 재판별 및 동치류 출력")
+        is_eq_after, _, _, _ = check_equivalence(current)
+        if is_eq_after:
+            print_all_equivalence_classes(current)
+            verify_partition(current)
+
+
+if __name__ == "__main__":
+    main()
